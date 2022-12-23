@@ -255,7 +255,7 @@ def parse_args():
 	parser.add_argument("-e", "--encrypted", help="ViewState is encrypted", required=False, default=False, action="store_true")
 	parser.add_argument("payload", help="ViewState payload (base 64 encoded)", nargs="?")
 	parser.add_argument("-f", "--file", help="read ViewState payload from file", required=False)
-	parser.add_argument("-b", "--bruteforce", help="bruteforce encryption and validation algorithms", required=False, default=False, action="store_true")
+	parser.add_argument("-b", "--bruteforce", help="bruteforce encryption and validation algorithms with some machine keys at machine_keys.txt", required=False, default=False, action="store_true")
 	args = parser.parse_args()
 
 	if len(sys.argv) == 1:
@@ -340,11 +340,14 @@ def run_viewgen(args):
 			viewgen.validation_key, viewgen.dec_key = binascii.unhexlify(viewgen.validation_key), binascii.unhexlify(viewgen.dec_key)
 			for valg in ViewGen.hash_algs.keys():
 				for dalg in ["AES", "3DES", "DES"]:
-					viewgen.validation_alg = valg
-					viewgen.dec_alg = dalg
-					viewstate, sa = viewgen.decode(args.payload)
-					encoded = viewgen.encode(viewstate, reuse_iv=True)
-					viewstate, sb = viewgen.decode(encoded)
+					try:
+						viewgen.validation_alg = valg
+						viewgen.dec_alg = dalg
+						viewstate, sa = viewgen.decode(args.payload)
+						encoded = viewgen.encode(viewstate, reuse_iv=True)
+						viewstate, sb = viewgen.decode(encoded)
+					except:
+						continue
 
 					if sa == sb:
 						success(f"Signature match")
